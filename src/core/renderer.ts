@@ -1,6 +1,6 @@
-import { hostCreateText, hostInsert, hostPatchProps, hostSetElementText, hostSetText } from '../dom-core'
+import { hostCreateText, hostInsert, hostPatchProps, hostRemove, hostSetElementText, hostSetText } from '../dom-core'
 import { ShapeFlags } from '../shared'
-import { VNode } from './vnode'
+import { VNode, VNodeChildren } from './vnode'
 
 
 export const render = (vnode: VNode, container: unknown) => {
@@ -9,7 +9,7 @@ export const render = (vnode: VNode, container: unknown) => {
 }
 
 const patch = (prevNode: VNode | null, nextNode: VNode, container: unknown = null, parentComp: unknown = null) => {
-  // 难道 nextNode 的类型
+  // 拿到 nextNode 的类型
   const { type, shapeFlag } = nextNode;
   switch (type) {
     // FIXME
@@ -120,10 +120,139 @@ const patchChildren = (prevNode: VNode, nextNode: VNode, container: HTMLElement)
     // 两次都是 array_children
     if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       if (nextShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        patchKey
+        patchKeyedChildren(prevNodeChildren as VNodeChildren, nextNodeChildren as VNodeChildren, container)
       }
     }
 
   }
 
+
+}
+
+const patchKeyedChildren = (prevNodeChildren: VNodeChildren, nextNodeChildren: VNodeChildren, container: HTMLElement) => {
+  let i = 0;                            // 记录索引
+  let e1 = prevNodeChildren.length - 1; // 老节点最后一个节点的索引
+  let e2 = nextNodeChildren.length - 1; // 新节点最后一个节点的索引
+
+  // 判断当前 VNode 类型和 key 是否相同
+  const isSameVNodeType = (n1: VNode, n2: VNode) => {
+    return n1.type === n2.type && n1.key === n2.key
+  }
+
+  // 这里针对的都是 DOM 节点实例有没有发生移动，而关注 props
+
+  // 从头开始，找到有相同的节点进行 patch
+  // 若发现不同，立即跳出！！
+
+  while (i <= e1 && i <= e2) {
+    // 获取新、旧 VNode
+    const prevChild = prevNodeChildren[i] as VNode;
+    const nextChild = nextNodeChildren[i] as VNode;
+
+    // 判断 key type 是否相等
+    if (!isSameVNodeType(prevChild, nextChild)) {
+      // 不相等，跳出
+      console.log("两个 child 不相等(从左往右比对)");
+      console.log(`prevChild:${prevChild}`);
+      console.log(`nextChild:${nextChild}`);
+      break;
+    }
+    // 相等，patch 这两个节点的 child
+    console.log("两个 child 相等，接下来对比着两个 child 节点(从左往右比对)");
+    patch(prevChild, nextChild, container);
+    i++;
+  }
+
+  // 第一步没有 patch 完，从尾开始 patch
+  // 发现不同，立即跳出
+  while (i <= e1 && i <= e2) {
+
+    const prevChild = prevNodeChildren[e1] as VNode;
+    const nextChild = nextNodeChildren[e2] as VNode;
+
+    if (!isSameVNodeType(prevChild, nextChild)) {
+      console.log("两个 child 不相等(从右往左比对)");
+      console.log(`prevChild:${prevChild}`);
+      console.log(`nextChild:${nextChild}`);
+      break;
+    }
+    console.log("两个 child 相等，接下来对比着两个 child 节点(从右往左比对)");
+    patch(prevChild, nextChild, container);
+    e1--;
+    e2--;
+  }
+
+  // 老节点全部 patch，但新节点还没有 patch 完
+  if (i > e1 && i <= e2) {
+    // 说明新节点数量大于旧节点数量
+    // 新增了 vnode 
+    // 循环 nextNodeChildren
+    while (i <= e2) {
+      console.log(`需要新创建一个 vnode: ${(nextNodeChildren[i] as VNode).key}`);
+      patch(null, nextNodeChildren[i] as VNode, container);
+      i++;
+    }
+  } else if (i > e2 && i <= e1) {
+    // 新节点数量小于旧节点
+    // 删除多余的
+    while (i <= e1) {
+      console.log(`需要删除当前的 vnode: ${(prevNodeChildren[i] as VNode).key}`);
+      hostRemove((prevNodeChildren[i] as VNode).elem);
+      i++;
+    }
+  } else {
+    // 左右两边都比对完，剩下的就是中间部位顺序变动
+    //如 
+    // a, b, [c, d, e], f, g
+    // a, b, [e, c, d], f, g
+    let s1 = i;
+    let s2 = i;
+    const keyToNewIndexMap = new Map();
+    // 先把 key 和 newIndex 绑定，方便后续基于 key 找到 newIndex
+    for (let i = s2; i <= e2; i++) {
+      const nextChild = nextNodeChildren[i] as VNode;
+      keyToNewIndexMap.set(nextChild.key, i);
+    }
+
+    // 需要处理新节点的数量
+    const toBePatched = e2 - s2 + 1;
+    const newIndexToOldIndexMap = new Array(toBePatched);
+    for (let index = 0; index < newIndexToOldIndexMap.length; index++) {
+      // 源码里面是用 0 来初始化的
+      // 但是有可能 0 是个正常值
+      // 我这里先用 -1 来初始化
+      newIndexToOldIndexMap[index] = -1;
+    }
+    // 遍历老节点
+    // 1. 需要找出老节点有，但新节点没有的 -> 把这个节点删掉
+    // 2. 新老节点都有的 -> patch 
+    for (i = s1; i <= e1; i++) {
+      const prevChild = prevNodeChildren[i] as VNode;
+      const newIndex = keyToNewIndexMap.get(prevChild.key);
+      newIndexToOldIndexMap[newIndex] = i;
+
+      if (newIndex === undefined) {
+        // 不存在于 newChildren 中，删除
+        hostRemove(prevChild.elem);
+      } else {
+        // 新老节点都在
+        console.log("新老节点都存在")
+        patch(prevChild, nextNodeChildren[newIndex] as VNode, container);
+      }
+    }
+
+    // 遍历新节点
+    // 1. 需要找出老节点没有，而新节点有的 -> 把这个节点创建
+    // 2. 最后需要移动一下位置，比如 [c, d, e] -> [e, c, d]
+    for (i = e2; i >= s2; i--) {
+      const nextChild = nextNodeChildren[i] as VNode;
+
+      if (newIndexToOldIndexMap[i] === -1) {
+        // 说明是个新增的节点
+        patch(null, nextNodeChildren[i] as VNode, container);
+      } else {
+
+      }
+    }
+  }
 }

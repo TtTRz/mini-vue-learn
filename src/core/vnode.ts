@@ -2,7 +2,7 @@ import { ShapeFlags } from '../shared';
 
 export type VNodeType = string | any;
 export type VNodeProps = any;
-export type VNodeChildren = string | Array<any>
+export type VNodeChildren = string | Array<VNode>
 export type VNode = {
   elem: any;
   component: any;
