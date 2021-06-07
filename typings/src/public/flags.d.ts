@@ -1,0 +1,18 @@
+export declare enum VNodeFlags {
+    ELEMENT_HTML = 1,
+    ELEMENT_SVG = 2,
+    COMPONENT_STATEFUL_NORMAL = 4,
+    COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE = 8,
+    COMPONENT_STATEFUL_KEPT_ALIVE = 16,
+    COMPONENT_FUNCTIONAL = 32,
+    TEXT = 64,
+    FRAGMENT = 128,
+    PORTAL = 256
+}
+export declare enum ChildrenFlags {
+    UNKNOWN_CHILDREN = 0,
+    NO_CHILDREN = 1,
+    SINGLE_VNODE = 2,
+    KEYED_VNODES = 4,
+    NONE_KEYED_VNODES = 8
+}
