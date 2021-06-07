@@ -1,7 +1,7 @@
 import { ChildrenFlags, VNodeFlags } from "../public/flags";
 
 export type VNodeData = {
-  class: Array<string>;
+  class: Array<string> | string;
   style: any;
   [key: string]: any;
 }
@@ -10,7 +10,7 @@ export type VNodeTag = string | any;
 export type VNodeChildren = Array<any> | any;
 export type VNode = {
   _isVNode: boolean;              // 判断是否为 VNode 对象
-  el: Element | null;             // 真实 DOM
+  el: Node | null;             // 真实 DOM
   tag: VNodeTag | null,        // tag
   flags: VNodeFlags | null;
   data: VNodeData | null;
@@ -28,6 +28,9 @@ const createVNode = (tag: VNodeTag, data: VNodeData | null = null, children: VNo
   let flags = null;
   if (typeof tag === "string") {
     flags = tag === "svg" ? VNodeFlags.ELEMENT_SVG : VNodeFlags.ELEMENT_HTML;
+    if (data) {
+      data.class = normalizeClass(data.class)
+    }
   } else if (tag === Fragment) {
     flags = VNodeFlags.FRAGMENT;
   } else if (tag === Portal) {
@@ -104,4 +107,22 @@ const normalizeVNodes = (children: Array<any>): Array<any> => {
     newChildren.push(child)
   }
   return newChildren
+}
+
+const normalizeClass = (classValue: any) => {
+  let res = ""
+  if (typeof classValue === "string") {
+    res = classValue
+  } else if (Array.isArray(classValue)) {
+    for (let i = 0; i < classValue.length; i++) {
+      res += normalizeClass(classValue[i]) + " "
+    }
+  } else if (typeof classValue === "object") {
+    for (const name in classValue) {
+      if (classValue[name]) {
+        res += name + " "
+      }
+    }
+  }
+  return res.trim()
 }
