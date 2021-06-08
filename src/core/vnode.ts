@@ -84,7 +84,7 @@ const createVNode = (tag: VNodeTag, data: VNodeData | null = null, children: VNo
 
 export const h = createVNode;
 
-const createTextVNode = (text: string) => {
+export const createTextVNode = (text: string) => {
   return {
     _isVNode: true,
     flags: VNodeFlags.TEXT,

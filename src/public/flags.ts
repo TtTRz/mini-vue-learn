@@ -1,11 +1,10 @@
 export enum VNodeFlags {
-
-
   ELEMENT_HTML = 1,
 
   ELEMENT_SVG = 1 << 1,
 
   ELEMENT = VNodeFlags.ELEMENT_HTML | VNodeFlags.ELEMENT_SVG,
+
   COMPONENT_STATEFUL_NORMAL = 1 << 2,
 
   COMPONENT_STATEFUL_SHOULD_KEEP_ALIVE = 1 << 3,
@@ -28,10 +27,14 @@ export enum VNodeFlags {
 
 export enum ChildrenFlags {
   UNKNOWN_CHILDREN = 0,
-  NO_CHILDREN = 1,
-  SINGLE_VNODE = 1 << 1,
-  KEYED_VNODES = 1 << 2,
-  NONE_KEYED_VNODES = 1 << 3,
-  MULTIPLE_VNODES = ChildrenFlags.KEYED_VNODES | ChildrenFlags.NONE_KEYED_VNODES,
 
+  NO_CHILDREN = 1,
+
+  SINGLE_VNODE = 1 << 1,
+
+  KEYED_VNODES = 1 << 2,
+
+  NONE_KEYED_VNODES = 1 << 3,
+
+  MULTIPLE_VNODES = ChildrenFlags.KEYED_VNODES | ChildrenFlags.NONE_KEYED_VNODES,
 }

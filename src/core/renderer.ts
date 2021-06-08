@@ -1,5 +1,5 @@
 import { ChildrenFlags, VNodeFlags } from "../public/flags";
-import { VNode } from "./vnode";
+import { VNode, createTextVNode } from "./vnode";
 
 const render = (vnode: VNode, container: any) => {
   const { vnode: prevVNode } = container;
@@ -110,7 +110,100 @@ const mountFragment = (vnode: VNode, container: any, isSVG: number) => {
   // 
   const { children, childrenFlags } = vnode;
 
-  switch(childrenFlags) {
+  switch (childrenFlags) {
     case ChildrenFlags.SINGLE_VNODE:
+  }
+}
+
+const mountPortal = (vnode: VNode, container: any) => {
+  const { tag, children, childrenFlags } = vnode
+  const target = typeof tag === 'string' ? document.querySelector(tag) : tag
+
+  if (childrenFlags & ChildrenFlags.SINGLE_VNODE) {
+    mount(children, target)
+  } else if (childrenFlags & ChildrenFlags.MULTIPLE_VNODES) {
+    for (let i = 0; i < children.length; i++) {
+      mount(children[i], target)
+    }
+  }
+
+  const placeholder = createTextVNode('')
+
+  mountText(placeholder, container)
+  vnode.el = placeholder.el
+}
+
+const mountComponent = (vnode: VNode, container: any, isSVG: number) => {
+  if (vnode.flags! & VNodeFlags.COMPONENT_STATEFUL) {
+    mountStatefulComponent(vnode, container, isSVG)
+  } else {
+    mountFunctionalComponent(vnode, container, isSVG)
+  }
+}
+
+const mountStatefulComponent = (vnode: VNode, container: any, isSVG: number) => {
+  // 创建组件实例
+  const instance = new vnode.tag()
+  // 渲染 VNode
+  instance.$vnode = instance.render()
+  // 挂载
+  mount(instance.$vnode, container, isSVG)
+
+  instance.$el = vnode.el = instance.$vnode.el
+
+
+}
+
+const mountFunctionalComponent = (vnode: VNode, container: any, isSVG: number) => {
+  // 获取 VNode
+  const $vnode = vnode.tag()
+  // 挂载
+  mount($vnode, container, isSVG)
+  vnode.el = $vnode.el
+}
+
+
+const patch = (prevVNode: VNode, nextVNode: VNode, container: any) => {
+  const nextFlags = nextVNode.flags;
+  const prevFlags = prevVNode.flags;
+
+  if (nextFlags !== prevFlags) {
+    replaceVNode(prevVNode, nextVNode, container)
+  } else if (nextFlags! & VNodeFlags.ELEMENT) {
+    patchElement(prevVNode, nextVNode, container)
+  } else if (nextFlags! & VNodeFlags.COMPONENT) {
+    patchComponent(prevVNode, nextVNode, container)
+  } else if (nextFlags! & VNodeFlags.TEXT) {
+    patchText(prevVNode, nextVNode)
+  } else if (nextFlags! & VNodeFlags.FRAGMENT) {
+    patchFragment(prevVNode, nextVNode, container)
+  } else if (nextFlags! & VNodeFlags.PORTAL) {
+    patchPortal(prevVNode, nextVNode)
+  }
+}
+
+const replaceVNode = (prevVNode: VNode, nextVNode: VNode, container: any) => {
+  container.removeChild(prevVNode.el)
+  mount(nextVNode, container)
+}
+
+
+const patchElement = (prevVNode: VNode, nextVNode: VNode, container: any) => {
+  if (prevVNode.tag !== nextVNode.tag) {
+    replaceVNode(prevVNode, nextVNode, container)
+    return
+  }
+
+  const el = (nextVNode.el = prevVNode.el)
+  const prevData = prevVNode.data!
+  const nextData = nextVNode.data!
+
+  if (nextData) {
+
+    for (let key in nextData) {
+      const prevValue = prevData[key]
+      const nextValue = nextData[key]
+      
+    }
   }
 }
